@@ -12,10 +12,10 @@
 #define NUMSTR_MAX_DIGITS 10
 
 
-void printArray(int* array, size_t length)
+void printArray(int *array, size_t length)
 {
-    for (size_t i = 1; i <= length; i++, array++) {
-        printf("%d ", *array);
+    for (size_t i = 0; i < length; i++) {
+        printf("%d ", array[i]);
     }
     printf("\n");
     return;
