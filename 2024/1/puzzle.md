@@ -97,7 +97,7 @@ So, for these example lists, the similarity score at the end of this process is 
 
 Once again consider your left and right lists. What is their similarity score?
 
-Answer:
+Your puzzle answer was 22962826.
 
 Although it hasn't changed, you can still get your puzzle input.
 

@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -10,77 +11,91 @@
 
 #define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
 #define NUMSTR_MAX_DIGITS 10
+#define TABLE_SIZE 1000
 
 
 typedef struct {
-    unsigned int key;
+    unsigned int value;
     unsigned int appearances;
 } item;
 
 
-void printArray(item *array, size_t length)
+void printArray(item *table)
 {
     size_t i = 0;
-    for (; i < length && (array[i].key != 0 && array[i].appearances != 0); i++) {
-        // printf("num: %d\nappears: %d\n", array[i].key, array[i].appearances);
+    for (; i < TABLE_SIZE && (table[i].value != 0 && table[i].appearances != 0); i++) {
+        // printf("num: %d\nappears: %d\n", table[i].key, table[i].appearances);
     }
     size_t j = i;
-    for (; j < length; j++);
+    for (; j < TABLE_SIZE; j++);
     printf("%lu populated items with %lu left\n", i, j-i);
     printf("\n");
     return;
 }
 
-
-// TODO: figure a way to quickly count lines (binary search?
-    // *nthline + 1 != eof  ?  goto *nthline += jump * 2  :  *nthline -= jump / 2)
-const size_t countLines(FILE *file)
+int prime(int num)
 {
-    assert(file != NULL && "`file` variable is `NULL`.");
-    char ch;
-    assert(ch != EOF && "`ch` variable is already at `EOF`.");
-    unsigned int count = 0;
-    while ((ch = fgetc(file)) != EOF) {
-        if (ch == '\n') {
-            count++;
+
+    // All prime numbers are odd except two
+    if (num & 1) {
+        num -= 2;
+    } else {
+        num--;
+    }
+
+    int i, j;
+    for (i = num; i >= 2; i -= 2) {
+        if (i % 2 == 0) {
+            continue;
+        }
+        for (j = 3; j <= sqrt(i); j += 2) {
+            if (i % j == 0) {
+                break;
+            }
+        }
+        if (j > sqrt(i)) {
+            return i;
         }
     }
-    return count;
+    // It will only be executed when n is 3
+    return 2;
 }
 
-// returns item index or first empty zeroed item index
-size_t findItemIndex(item *array, size_t length, int num)
+unsigned int hash(item *table, int num)
 {
-    size_t i;
-    for (i=0; array[i].key != num && (array[i].key != 0 && array[i].appearances != 0) && i <= length; i++);
-    assert(i < length && "Item not found and array is full");
-    return i;
+    assert(table != NULL);
+    return num * sqrt(TABLE_SIZE) + num % TABLE_SIZE;
 }
 
-void addAppearence(item *array, size_t length, int num)
+item findItem(item* table, int num)
 {
-    size_t i = findItemIndex(array, length, num);
-    // find num index of array or empty index in array
-    // if num found in array, mark its appearance. Else, add it to the end of the list
-    if (array[i].key == num && array[i].appearances > 0) {
-        array[i].appearances += 1;
+
+}
+
+void addAppearence(item *table, int num)
+{
+    int key = hash(table, num);
+    // find num index of table or empty index in table
+    // if num found in table, mark its appearance. Else, add it to the end of the table
+    if (table[key].value == num && table[key].appearances > 0) {
+        table[key].appearances += 1;
     } else {
-        array[i].key = num;
-        array[i].appearances += 1;
+        table[key].value = num;
+        table[key].appearances += 1;
     }
     return;
 }
 
 
 // Given that all lines have the same structure, I could have just done strncpy to make things a lot easier
-void separateArrays(FILE *file, item *array_1, item *array_2, size_t length)
+void separateArrays(FILE *file, item *table_1, item *table_2)
 {
     assert(file != NULL);
-    assert(array_1 != NULL);
-    assert(array_2 != NULL);
-    // "weird use of sizeof/sizeof; sizeof array_x is the pointer size"
-    // assert(length == ARRAY_LENTH(array_1)); // Should I assert ARRAY_SIZE is array's size?
-    // assert(length == ARRAY_LENTH(array_2)); // Should I assert ARRAY_SIZE is array's size?
+    assert(table_1 != NULL);
+    assert(table_2 != NULL);
+    // "weird use of sizeof/sizeof; sizeof table_x is the pointer size"
+    // assert(TABLE_SIZE == ARRAY_LENTH(table_1)); // Should I assert ARRAY_SIZE is table's size?
+    // assert(TABLE_SIZE == ARRAY_LENTH(table_2)); // Should I assert ARRAY_SIZE is table's size?
     char num[NUMSTR_MAX_DIGITS] = { '\0' };
     char ch;
     bool first = true;
@@ -92,12 +107,9 @@ void separateArrays(FILE *file, item *array_1, item *array_2, size_t length)
             n++;
         } else if (n > 0) {
             if (first) {
-                addAppearence(array_1, length, atoi(num));
-                // array_1[i] = atoi(num);
+                addAppearence(table_1, atoi(num));
             } else {
-                addAppearence(array_2, length, atoi(num));
-                // array_2[i] = atoi(num);
-                // i++;
+                addAppearence(table_2, atoi(num));
             }
             n = 0;
             memset(num, '\0', sizeof num);
@@ -108,75 +120,15 @@ void separateArrays(FILE *file, item *array_1, item *array_2, size_t length)
 }
 
 
-/*
-void xorSwap(int *num_1, int *num_2)
-{
-    if (*num_1 == *num_2) return;
-    *num_1 = *num_1 ^ *num_2;
-    *num_2 = *num_1 ^ *num_2;
-    *num_1 = *num_1 ^ *num_2;
-    return;
-}
-
-// Median-of-three to improve pivot choice
-int medianOfThree(int *array, int low, int high) {
-    int mid = low + (high - low) / 2;
-    if (array[mid] < array[low]) {
-        xorSwap(&array[mid], &array[low]);
-    }
-    if (array[high] < array[low]) {
-        xorSwap(&array[high], &array[low]);
-    }
-    if (array[high] < array[mid]) {
-        xorSwap(&array[high], &array[mid]);
-    }
-    // Place the median at the high position to use it as a pivot
-    xorSwap(&array[mid], &array[high]);
-    return array[high];
-}
-
-// Algorithm `inplace_quick_sort` taken from code fragment 12.6 of Data Structures and Algorithms in Python by Goldwasser, et al. Improved by adding median of three
-void inplaceQuickSort(int *array, size_t length, size_t low, size_t high)
-{
-    // Sort the array from array[a] to array[b] inclusive
-    assert(array != NULL && "`array` is a null pointer");
-    if (low >= high) {
-        return;
-    }
-    int pivot = medianOfThree(array, low, high);
-    size_t left = low;
-    size_t right = high-1;
-    while (left <= right) {
-        // printArray(array, length);
-        while (left <= right && array[left] < pivot) {
-            left += 1;
-        }
-        while (left <= right && pivot < array[right]) {
-            right -= 1;
-        }
-        if (left <= right) {
-            xorSwap(&array[left], &array[right]);
-            left++;
-            right--;
-        }
-    }
-    xorSwap(&array[left], &array[high]);
-    inplaceQuickSort(array, length, low, left-1);
-    inplaceQuickSort(array, length, left+1, high);
-    return;
-}
-*/
-
-
-void zeroItems(item *array, size_t length)
+void zeroItems(item *table)
 {
     item zeroed_item = {
-        .key = 0,
+        .value = 0,
         .appearances = 0
     };
-    for (size_t i=0; i <= length; i++) {
-        array[i] = zeroed_item;
-        // printf("Num: %d\nAppearances: %d\n", array[i].key, array[i].appearances);
+    for (size_t i=0; i <= TABLE_SIZE; i++) {
+        table[i] = zeroed_item;
+        // printf("Num: %d\nAppearances: %d\n", table[i].key, table[i].appearances);
     }
     return;
 }
@@ -191,45 +143,36 @@ int main()
         return -1;
     }
 
-    // Get arrays' size to be able to define them more properly (perhaps nonsense to do this pass? No `realloc` or overflow though)
-    const size_t ARRAY_SIZE = countLines(input);
+    // Get tables' size to be able to define them more properly (perhaps nonsense to do this pass? No `realloc` or overflow though)
     rewind(input);
 
-    item array_1[ARRAY_SIZE];
-    item array_2[ARRAY_SIZE];
-    zeroItems(array_1, ARRAY_SIZE);
-    zeroItems(array_2, ARRAY_SIZE);
+    item table_1[TABLE_SIZE]; item table_2[TABLE_SIZE]; zeroItems(table_1);
+    zeroItems(table_2);
 
-    separateArrays(input, array_1, array_2, ARRAY_SIZE);
+    separateArrays(input, table_1, table_2);
 
-    // inplaceQuickSort(array_1, ARRAY_SIZE, 0, (ARRAY_SIZE-1));
-    // inplaceQuickSort(array_2, ARRAY_SIZE, 0, (ARRAY_SIZE-1));
-
-    printArray(array_1, ARRAY_SIZE);
-    printArray(array_2, ARRAY_SIZE);
+    printArray(table_1);
+    printArray(table_2);
     int result = 0;
-    // for (size_t i=0; i < ARRAY_SIZE; i++) {
-    //     result += calcDifference(&array_1[i], &array_2[i]);
-    // }
 
     size_t i = 0;
     size_t j = 0;
     unsigned int similarities = 0;
     // Get similarity
-    // Iterate over every populated item in array_1
-    for (i=0; i < ARRAY_SIZE && (array_1[i].key != 0 && array_1[i].appearances != 0); i++) {
-        // try find current item from array_1 in array_2
+    // Iterate over every populated item in table_1
+    for (i=0; i < ARRAY_SIZE && (table_1[i].value != 0 && table_1[i].appearances != 0); i++) {
+        // try find current item from table_1 in table_2
         for (j=0;
             (j < ARRAY_SIZE) && // don't go over the ARRAY_SIZE limit
-            (array_2[j].key != array_1[i].key) && // try to find the item
-            (array_2[j].key != 0 && array_2[j].appearances != 0); // don't look further into non populated items
+            (table_2[j].value != table_1[i].value) && // try to find the item
+            (table_2[j].value != 0 && table_2[j].appearances != 0); // don't look further into non populated items
             j++);
         // if actually found a corresponding number, add calculate similarity and add to result
-        if (array_1[i].key == array_2[j].key && j < ARRAY_SIZE) {
-            result += array_1[i].key * array_1[i].appearances * array_2[j].appearances; // update result
+        if (table_1[i].value == table_2[j].value && j < ARRAY_SIZE) {
+            result += table_1[i].value * table_1[i].appearances * table_2[j].appearances; // update result
             similarities++;
             printf("Similarity found!\n");
-            printf("%d appeared %d times in array_1 and %d in array_2(%d)\n", array_1[i].key, array_1[i].appearances, array_2[j].appearances, array_2[j].key);
+            printf("%d appeared %d times in table_1 and %d in table_2(%d)\n", table_1[i].value, table_1[i].appearances, table_2[j].appearances, table_2[j].value);
             printf("result: %u\n", result);
             printf("similarities: %u\n\n", similarities);
         }
