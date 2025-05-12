@@ -19,9 +19,6 @@ int main()
 {
     FILE* input = fopen("input", "r");
     assert(input != NULL && "Error while trying to open `input` file.");
-
-
-
     char report[LINE_SIZE] = curLine;
     char adjacentLevels[2][REPORT_SIZE] = { report[i], report[i+1*(non-space)] };
     char* c = '\0';
